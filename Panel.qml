@@ -15,8 +15,8 @@ import "I18n.js" as I18n
 // only refreshes immediately and focuses the keyboard.
 Panel {
   id: root
-  moduleName: "dockmarchy"
-  ipcTarget: "dockmarchy"
+  moduleName: "io.github.this-is-npc.dockmarchy"
+  ipcTarget: "io.github.this-is-npc.dockmarchy"
   manageIpc: false
 
   property string filter: "all"
