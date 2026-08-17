@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "dockmarchy",
+  "name": "Dockmarchy",
+  "version": "1.0.0",
+  "author": "This_Is_NPC",
+  "license": "MIT",
+  "description": "Docker and Podman status in the Omarchy bar: containers, images, volumes, and networks.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Containers",
+    "description": "See Docker and Podman containers, images, volumes, and networks from the bar.",
+    "category": "System",
+    "aliases": ["docker", "podman", "containers", "dockmarchy"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 15,
+      "engine": "Auto",
+      "language": "en"
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 5,
+        "max": 3600,
+        "step": 5,
+        "defaultValue": 15
+      },
+      {
+        "key": "engine",
+        "type": "enum",
+        "label": "Engine",
+        "options": ["Auto", "Docker", "Podman"],
+        "defaultValue": "Auto"
+      },
+      {
+        "key": "language",
+        "type": "enum",
+        "label": "Language",
+        "options": ["en", "pt"],
+        "defaultValue": "en"
+      }
+    ]
+  }
+}

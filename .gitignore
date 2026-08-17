@@ -1,0 +1,8 @@
+# Restos de QML compilado; o plugin vive no git, o estado da barra não.
+
+*.qmlc
+*.jsc
+.qmlls.ini
+.cursor/
+.claude/
+.opencode/
