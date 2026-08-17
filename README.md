@@ -7,31 +7,22 @@ volumes, and networks. Containers are grouped by compose project, with
 hardware usage, search, bulk start/stop/restart, and logs. The other
 tabs list engine resources and can remove selected items.
 
-![Dockmarchy panel with hardware gauges, compose groups, and container actions](image.png)
+![Dockmarchy panel with hardware gauges, compose groups, and container actions](preview.png)
 
 ## Install
 
-From a git remote:
-
-```bash
-omarchy plugin add <git-url>
-omarchy plugin enable dockmarchy
+```sh
+omarchy plugin add https://github.com/This-Is-NPC/dockmarchy.git --enable
 ```
 
-While hacking on this checkout, copy it into the user plugin directory
-(the shell refuses a symlink there):
+Requires [Docker](https://docs.docker.com/) and/or [Podman](https://podman.io/)
+on `PATH`. No sudo or pkexec. The plugin runs as your user inside
+`omarchy-shell` and calls the engine CLIs (`ps`, `stats`, start/stop/restart,
+remove, logs).
 
-```bash
-rsync -a --delete --exclude .git --exclude test /home/howl/Projects/person/dockmarchy/ ~/.config/omarchy/plugins/dockmarchy/
-omarchy-shell shell rescanPlugins
-omarchy plugin enable dockmarchy --section right
-```
+## Usage
 
-`omarchy plugin disable dockmarchy` takes it off the bar;
-`omarchy plugin remove dockmarchy` uninstalls it (don't remove a symlink you
-still want).
-
-## The bar
+Click the logo to open or close the panel. Press Escape to close it.
 
 The widget is the Docker whale or the Podman seal, depending on which
 engine answered. Hover shows the running count; after the panel has
@@ -40,14 +31,9 @@ It turns urgent when something running is unhealthy, restarting, paused,
 or dead. Right-click refreshes; middle-click opens logs for the first
 visible container.
 
-## The panel
-
 Hardware is three small gauges — CPU, RAM, and disk — against the
 machine totals, for example `12GiB/46GiB`. Disk is the Docker/Podman
 footprint (`docker system df`) against the root filesystem.
-
-The container list scrolls on its own. Hero, hardware, filters, search,
-the command bar, and the footer stay put.
 
 Containers are grouped by compose project. Filter by all / running /
 stopped, then search by name, service, project, or image. Check rows (or
@@ -85,6 +71,18 @@ both when both answer. Force one in the widget settings (`Auto` / `Docker` /
 closed, only the container list is polled so the bar stays cheap;
 hardware gauges and images/volumes/networks load when you open the panel.
 
+## Configure
+
+```sh
+omarchy bar move io.github.this-is-npc.dockmarchy --section right
+```
+
+## Remove
+
+```sh
+omarchy plugin remove io.github.this-is-npc.dockmarchy
+```
+
 ## Development
 
 ```bash
@@ -94,6 +92,16 @@ omarchy plugin validate .   # manifest against the shell's schema
 
 `Model.js` has no Qt in it, so the list engine runs in node. `Panel.qml`
 only paints state.
+
+While hacking on this checkout, copy it into the user plugin directory
+(the shell refuses a symlink there):
+
+```bash
+rsync -a --delete --exclude .git --exclude test \
+  ./ ~/.config/omarchy/plugins/io.github.this-is-npc.dockmarchy/
+omarchy-shell shell rescanPlugins
+omarchy plugin enable io.github.this-is-npc.dockmarchy --section right
+```
 
 ---
 
