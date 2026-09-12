@@ -66,8 +66,10 @@ Language defaults to English. Switch to Portuguese from the footer.
 | Move | Hover | arrows or `hjkl` |
 
 Engine detection is automatic: Docker if the CLI is there, Podman if it is,
-both when both answer. Force one in the widget settings (`Auto` / `Docker` /
-`Podman`). Refresh interval defaults to 15 seconds. While the panel is
+both when both answer. When `docker` is really Podman (`podman-docker`, or the
+Docker socket is a symlink to Podman's), the two are treated as one engine so
+containers, images, volumes, and networks are not listed twice. Force one in
+the widget settings (`Auto` / `Docker` / `Podman`). Refresh interval defaults to 15 seconds. While the panel is
 closed, only the container list is polled so the bar stays cheap;
 hardware gauges and images/volumes/networks load when you open the panel.
 

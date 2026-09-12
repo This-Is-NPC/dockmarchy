@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.this-is-npc.dockmarchy",
   "name": "Dockmarchy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "This_Is_NPC",
   "license": "MIT",
   "description": "Docker and Podman status in the Omarchy bar: containers, images, volumes, and networks.",

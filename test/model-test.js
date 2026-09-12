@@ -171,6 +171,58 @@ assert.strictEqual(M.groupByProject([lone])[0].name, "")
 assert.strictEqual(merged[0].name, "api")
 assert.strictEqual(running.kind, "container")
 
+// ---- same engine behind both CLIs must not be counted twice
+// `docker --version` says "podman ..." on a podman-docker host, and the same
+// container/image/volume/network then arrives from both commands.
+
+assert.strictEqual(M.dockerIsPodmanShim("podman version 6.1.1"), true)
+assert.strictEqual(M.dockerIsPodmanShim("Emulate Docker CLI using podman."), true)
+assert.strictEqual(M.dockerIsPodmanShim("Docker version 28.0.1, build bbd0f7c"), false)
+assert.strictEqual(M.dockerIsPodmanShim(""), false)
+
+const thinContainer = M.normalize({
+  Id: "ABC1E4985A70",
+  Names: ["/ib_local_ai_backend"],
+  Image: "ib-local-ai_backend:4.2.1",
+  State: "running",
+  Labels: ""
+}, "docker")
+const richContainer = M.normalize({
+  Id: "abc1e4985a70",
+  Names: ["/ib_local_ai_backend"],
+  Image: "ib-local-ai_backend:4.2.1",
+  State: "running",
+  Status: "Up 2 hours (healthy)",
+  Labels: ""
+}, "podman")
+const oneContainer = M.mergeLists([thinContainer], [richContainer])
+assert.strictEqual(oneContainer.length, 1)
+assert.strictEqual(oneContainer[0].status, "Up 2 hours (healthy)")
+assert.strictEqual(oneContainer[0].engine, "podman")
+assert.strictEqual(M.identityKey(thinContainer), M.identityKey(richContainer))
+assert.ok(M.itemScore(richContainer) > M.itemScore(thinContainer))
+
+const oneImage = M.mergeLists(
+  [M.normalizeImage({ ID: "f4c02a334659", Repository: "nginx", Tag: "latest", Containers: "1" }, "docker")],
+  [M.normalizeImage({ Id: "f4c02a334659", Repository: "nginx", Tag: "latest", Containers: "1" }, "podman")]
+)
+assert.strictEqual(oneImage.length, 1)
+
+const oneNetwork = M.mergeLists(
+  [M.normalizeNetwork({ ID: "9bd1c0de341a", Name: "shared", Driver: "bridge" }, "docker")],
+  [M.normalizeNetwork({ id: "9bd1c0de341a", name: "shared", driver: "bridge" }, "podman")]
+)
+assert.strictEqual(oneNetwork.length, 1)
+
+const oneVolume = M.mergeLists(
+  [M.normalizeVolume({ Name: "shared_data", Driver: "local" }, "docker")],
+  [M.normalizeVolume({ Name: "shared_data", Driver: "local" }, "podman")]
+)
+assert.strictEqual(oneVolume.length, 1)
+
+// A genuinely separate engine keeps its own rows.
+assert.strictEqual(M.mergeLists([running], [pod]).length, 2)
+
 // ---- images, volumes, networks
 
 const dockerImage = {

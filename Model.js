@@ -357,14 +357,69 @@ function parseList(raw, engine) {
   }
 }
 
+// Two engines that share a backend (podman's docker shim, or DOCKER_HOST
+// pointed at the podman socket) report the same resources twice. Fold
+// duplicates by content identity so the panel never counts them twice.
+function identityKey(item) {
+  if (!item) return ""
+  var kind = String(item.kind || "container")
+  if (kind === "container") {
+    var cid = String(item.containerId || item.id || item.shortId || "").toLowerCase()
+    return cid ? "container:" + cid.slice(0, 12) : ""
+  }
+  if (kind === "image") {
+    var iid = String(item.resourceId || item.id || item.shortId || "").replace(/^sha256:/, "").toLowerCase()
+    return iid ? "image:" + iid : ""
+  }
+  if (kind === "network") {
+    var nid = String(item.resourceId || item.id || item.shortId || "").toLowerCase()
+    if (nid) return "network:" + nid.slice(0, 12)
+    var nname = String(item.name || "").toLowerCase()
+    return nname ? "network:" + nname : ""
+  }
+  if (kind === "volume") {
+    var vname = String(item.resourceId || item.name || "")
+    return vname ? "volume:" + vname : ""
+  }
+  return ""
+}
+
+// When the same resource arrives from both engines keep the row that
+// carries the most detail (for example podman's "Up 3 hours (healthy)"
+// instead of the shim's bare "healthy").
+function itemScore(item) {
+  if (!item) return -1
+  var keys = ["status", "health", "image", "ports", "driver", "scope", "mountpoint",
+    "sizeText", "created", "service", "project", "repository", "tag", "memText", "netText"]
+  var score = 0
+  for (var i = 0; i < keys.length; i++) {
+    var value = item[keys[i]]
+    if (value !== undefined && value !== null && String(value) !== "" && String(value) !== "0") score++
+  }
+  if (item.problem) score++
+  return score
+}
+
 function mergeLists() {
-  var containers = []
+  var out = []
+  var index = {}
   for (var i = 0; i < arguments.length; i++) {
     var list = arguments[i]
     if (!list || !list.length) continue
-    for (var j = 0; j < list.length; j++) containers.push(list[j])
+    for (var j = 0; j < list.length; j++) {
+      var item = list[j]
+      if (!item) continue
+      var key = identityKey(item)
+      if (key && index[key] !== undefined) {
+        var at = index[key]
+        if (itemScore(item) > itemScore(out[at])) out[at] = item
+        continue
+      }
+      if (key) index[key] = out.length
+      out.push(item)
+    }
   }
-  return sortContainers(containers)
+  return sortContainers(out)
 }
 
 function summary(containers) {
@@ -911,6 +966,12 @@ function attachStats(containers, rows) {
   return out
 }
 
+// podman-docker prints "podman version ..." for `docker --version`. When
+// that happens both CLIs drive one engine, so the panel must not poll both.
+function dockerIsPodmanShim(versionText) {
+  return /podman/i.test(String(versionText || ""))
+}
+
 function barEngine(stats, dockerOk, podmanOk) {
   if (stats && stats.engine === "podman") return "podman"
   if (stats && stats.engine === "docker") return "docker"
@@ -945,6 +1006,9 @@ if (typeof module !== "undefined") {
     sortContainers: sortContainers,
     parseList: parseList,
     mergeLists: mergeLists,
+    identityKey: identityKey,
+    itemScore: itemScore,
+    dockerIsPodmanShim: dockerIsPodmanShim,
     summary: summary,
     filterBy: filterBy,
     searchBy: searchBy,
