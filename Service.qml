@@ -585,6 +585,8 @@ Item {
     command: []
     stdout: StdioCollector { id: whichDockerStdout; waitForEnd: true }
     onExited: function(exitCode) {
+      // abortPoll() killed the probe: its exit code says nothing about docker.
+      if (root._whichLeft === 0) return
       root.dockerInstalled = exitCode === 0
       root.dockerEmulatesPodman = root.dockerInstalled
         && Model.dockerIsPodmanShim(String(whichDockerStdout.text || ""))
@@ -597,6 +599,7 @@ Item {
     running: false
     command: []
     onExited: function(exitCode) {
+      if (root._whichLeft === 0) return
       root.podmanInstalled = exitCode === 0
       root.whichFinished()
     }
