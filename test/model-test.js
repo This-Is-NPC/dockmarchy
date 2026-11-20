@@ -215,10 +215,33 @@ const oneNetwork = M.mergeLists(
 assert.strictEqual(oneNetwork.length, 1)
 
 const oneVolume = M.mergeLists(
-  [M.normalizeVolume({ Name: "shared_data", Driver: "local" }, "docker")],
-  [M.normalizeVolume({ Name: "shared_data", Driver: "local" }, "podman")]
+  [M.normalizeVolume({ Name: "shared_data", Driver: "local", Mountpoint: "/var/lib/containers/storage/volumes/shared_data/_data" }, "docker")],
+  [M.normalizeVolume({ Name: "shared_data", Driver: "local", Mountpoint: "/var/lib/containers/storage/volumes/shared_data/_data/" }, "podman")]
 )
 assert.strictEqual(oneVolume.length, 1)
+
+// Same volume name on two real engines: different mountpoints, two rows.
+assert.strictEqual(M.mergeLists(
+  [M.normalizeVolume({ Name: "pgdata", Driver: "local", Mountpoint: "/var/lib/docker/volumes/pgdata/_data" }, "docker")],
+  [M.normalizeVolume({ Name: "pgdata", Driver: "local", Mountpoint: "/home/u/.local/share/containers/storage/volumes/pgdata/_data" }, "podman")]
+).length, 2)
+// Without a mountpoint there is no proof of identity.
+assert.strictEqual(M.mergeLists(
+  [M.normalizeVolume({ Name: "pgdata", Driver: "local" }, "docker")],
+  [M.normalizeVolume({ Name: "pgdata", Driver: "local" }, "podman")]
+).length, 2)
+
+// Same image digest pulled into two real engines keeps both rows.
+assert.strictEqual(M.mergeLists(
+  [M.normalizeImage({ ID: "f4c02a334659", Repository: "nginx", Tag: "latest" }, "docker")],
+  [M.normalizeImage({ Id: "f4c02a334659", Repository: "docker.io/library/nginx", Tag: "latest" }, "podman")]
+).length, 2)
+
+// Networks without a hex id must not collide on a 12-char prefix.
+assert.strictEqual(M.mergeLists(
+  [M.normalizeNetwork({ Name: "compose_proj_a_default", Driver: "bridge" }, "docker")],
+  [M.normalizeNetwork({ Name: "compose_proj_b_default", Driver: "bridge" }, "podman")]
+).length, 2)
 
 // A genuinely separate engine keeps its own rows.
 assert.strictEqual(M.mergeLists([running], [pod]).length, 2)

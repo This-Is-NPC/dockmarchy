@@ -369,17 +369,24 @@ function identityKey(item) {
   }
   if (kind === "image") {
     var iid = String(item.resourceId || item.id || item.shortId || "").replace(/^sha256:/, "").toLowerCase()
-    return iid ? "image:" + iid : ""
+    // Real Docker and Podman can share a config digest for the same pull;
+    // the ref text differs ("nginx" vs "docker.io/library/nginx"), so it
+    // keeps separate engines apart while the shim still folds.
+    return iid ? "image:" + iid + "|" + String(item.name || "").toLowerCase() : ""
   }
   if (kind === "network") {
     var nid = String(item.resourceId || item.id || item.shortId || "").toLowerCase()
-    if (nid) return "network:" + nid.slice(0, 12)
+    // Only truncate real hex ids; a name used as id must stay whole.
+    if (nid) return "network:" + (/^[0-9a-f]{12,}$/.test(nid) ? nid.slice(0, 12) : nid)
     var nname = String(item.name || "").toLowerCase()
     return nname ? "network:" + nname : ""
   }
   if (kind === "volume") {
+    // Same name alone is not the same volume: separate engines keep their
+    // data under different mountpoints. No mountpoint, no folding.
     var vname = String(item.resourceId || item.name || "")
-    return vname ? "volume:" + vname : ""
+    var mp = String(item.mountpoint || "").replace(/\/+$/, "")
+    return vname && mp ? "volume:" + vname + "|" + mp : ""
   }
   return ""
 }
