@@ -46,7 +46,11 @@ Item {
     if (value === "docker" || value === "podman") return value
     return "auto"
   }
-  readonly property bool wantDocker: enginePref !== "podman"
+  // podman-docker exposes the same engine as `podman`. Drop the shim so the
+  // panel does not list every container, image, and volume twice.
+  property bool dockerEmulatesPodman: false
+  readonly property bool suppressDocker: enginePref === "auto" && dockerEmulatesPodman && podmanInstalled
+  readonly property bool wantDocker: enginePref !== "podman" && !suppressDocker
   readonly property bool wantPodman: enginePref !== "docker"
   property int _whichLeft: 0
   property bool _whichKnown: false
@@ -66,6 +70,8 @@ Item {
   property bool _podmanStatsDone: true
   property string _dockerStatsOutput: ""
   property string _dockerStatsError: ""
+  property string _podmanStatsOutput: ""
+  property string _podmanStatsError: ""
   property var _statRows: []
   property real _dockerDisk: 0
   property real _podmanDisk: 0
@@ -115,7 +121,9 @@ Item {
 
   function probeWhich() {
     _whichLeft = 2
-    whichDocker.command = ["which", "docker"]
+    // Presence and version travel together; `docker --version` also tells us
+    // when the CLI is podman in disguise (podman-docker).
+    whichDocker.command = ["sh", "-c", "docker --version 2>&1"]
     whichPodman.command = ["which", "podman"]
     whichDocker.running = true
     whichPodman.running = true
@@ -143,6 +151,9 @@ Item {
   }
 
   function abortPoll() {
+    stopProc(whichDocker)
+    stopProc(whichPodman)
+    _whichLeft = 0
     stopProc(dockerList)
     stopProc(podmanList)
     stopProc(dockerStats)
@@ -572,8 +583,11 @@ Item {
     id: whichDocker
     running: false
     command: []
+    stdout: StdioCollector { id: whichDockerStdout; waitForEnd: true }
     onExited: function(exitCode) {
       root.dockerInstalled = exitCode === 0
+      root.dockerEmulatesPodman = root.dockerInstalled
+        && Model.dockerIsPodmanShim(String(whichDockerStdout.text || ""))
       root.whichFinished()
     }
   }
